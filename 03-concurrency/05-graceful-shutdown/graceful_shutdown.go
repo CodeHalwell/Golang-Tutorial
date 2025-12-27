@@ -148,7 +148,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	close(s.shutdown)
 
 	// Create a deadline to wait for graceful completion
-	// If context already has a deadline, use the earlier of the two
+	// Use the caller's context to respect cancellation and deadlines
 	shutdownDeadline := time.Now().Add(30 * time.Second)
 	ctxDeadline, ok := ctx.Deadline()
 	if ok && ctxDeadline.Before(shutdownDeadline) {
@@ -156,7 +156,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 
 	shutdownCtx, cancel := context.WithDeadline(
-		context.Background(),
+		ctx, // Use caller's context, not Background
 		shutdownDeadline,
 	)
 	defer cancel()

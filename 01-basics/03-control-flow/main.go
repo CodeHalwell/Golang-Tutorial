@@ -303,7 +303,7 @@ func validateEmail(email string) error {
 		return fmt.Errorf("email is empty")
 	}
 
-	if !contains(email, '@') {
+	if !contains(email, "@") {
 		return fmt.Errorf("email missing @")
 	}
 

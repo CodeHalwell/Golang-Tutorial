@@ -409,8 +409,8 @@ func main() {
 }
 ```
 
-### Exercise 3: Multiple Files
-Create two files and run them together:
+### Exercise 3: Multiple Files in Same Package
+Create two files in the same package and run them together:
 
 **hello.go:**
 ```go
@@ -427,10 +427,27 @@ func sayHello() {
 }
 ```
 
+**greeter.go:**
+```go
+package main
+
+import "fmt"
+
+func sayGoodbye() {
+    fmt.Println("Goodbye from greeter.go")
+}
+```
+
 **Run with:**
 ```bash
-go run hello.go
+# Run all .go files in the current directory
+go run .
+
+# Or explicitly list the files
+go run hello.go greeter.go
 ```
+
+Both files are compiled together as part of the same `main` package. You can call functions from either file within the same package.
 
 ---
 

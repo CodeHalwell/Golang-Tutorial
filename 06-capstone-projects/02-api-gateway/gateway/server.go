@@ -15,6 +15,17 @@ import (
 	"time"
 )
 
+// Shared HTTP client for backend requests
+// http.Client is safe for concurrent use by multiple goroutines
+var defaultHTTPClient = &http.Client{
+	Timeout: 10 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+	},
+}
+
 // Server implements the API gateway HTTP server
 type Server struct {
 	addr              string
@@ -90,10 +101,9 @@ func (s *Server) AddMiddleware(m Middleware) {
 
 // handler creates the HTTP handler with middleware chain
 func (s *Server) handler() http.Handler {
-	baseHandler := http.HandlerFunc(s.handleRequest)
+	var handler http.Handler = http.HandlerFunc(s.handleRequest)
 
 	// Apply middleware in reverse order (last added executes first)
-	handler := baseHandler
 	for i := len(s.middleware) - 1; i >= 0; i-- {
 		handler = s.middleware[i](handler)
 	}
@@ -244,26 +254,22 @@ type BackendHandler struct {
 // NewBackendHandler creates a backend handler
 func NewBackendHandler(target *url.URL) func(*http.Request) (*http.Response, error) {
 	return func(req *http.Request) (*http.Response, error) {
-		// Create new request for backend
-		backendReq := &http.Request{
-			Method:     req.Method,
-			URL:        &url.URL{Scheme: target.Scheme, Host: target.Host, Path: req.URL.Path, RawQuery: req.URL.RawQuery},
-			Header:     copyHeaders(req.Header),
-			Body:       req.Body,
-			RequestURI: "",
-		}
+		// Clone the request to avoid modifying the original
+		backendReq := req.Clone(req.Context())
+		
+		// Update URL for backend
+		backendReq.URL.Scheme = target.Scheme
+		backendReq.URL.Host = target.Host
+		backendReq.Host = target.Host
+		backendReq.RequestURI = "" // Must be empty for client requests
 
 		// Add forwarding headers
 		backendReq.Header.Add("X-Forwarded-For", getClientIP(req))
 		backendReq.Header.Add("X-Forwarded-Proto", req.Proto)
 		backendReq.Header.Add("X-Forwarded-Host", req.Host)
 
-		// Create HTTP client with timeout
-		client := &http.Client{
-			Timeout: 10 * time.Second,
-		}
-
-		return client.Do(backendReq)
+		// Use shared HTTP client (safe for concurrent use)
+		return defaultHTTPClient.Do(backendReq)
 	}
 }
 

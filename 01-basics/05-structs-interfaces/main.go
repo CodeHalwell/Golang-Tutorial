@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"time"
@@ -535,11 +536,11 @@ type Circle struct {
 }
 
 func (c Circle) Area() float64 {
-	return 3.14159 * c.Radius * c.Radius
+	return math.Pi * c.Radius * c.Radius
 }
 
 func (c Circle) Perimeter() float64 {
-	return 2 * 3.14159 * c.Radius
+	return 2 * math.Pi * c.Radius
 }
 
 func PrintShapeInfo(s Shape) {

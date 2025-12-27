@@ -30,9 +30,6 @@ type Store struct {
 	// mu protects the TTL map and expiration tracking
 	mu sync.RWMutex
 
-	// expiredKeys tracks keys that have expired for cleanup
-	expiredKeys []string
-
 	// metrics tracks cache operations
 	metrics *StoreMetrics
 
@@ -102,7 +99,6 @@ func (s *Store) Get(key string) ([]byte, error) {
 	if entry.IsExpired() {
 		// Remove expired entry
 		s.data.Delete(key)
-		s.markForCleanup(key)
 		s.metrics.recordMiss()
 		return nil, ErrNotFound
 	}
@@ -164,7 +160,6 @@ func (s *Store) Delete(key string) {
 
 	s.metrics.recordDelete()
 	s.data.Delete(key)
-	s.markForCleanup(key)
 }
 
 // Clear removes all keys from the cache.
@@ -236,26 +231,9 @@ func (s *Store) cleanupLoop() {
 }
 
 // cleanupExpired removes all expired entries from the cache.
+// It performs a full scan of all entries to check for expiration.
 func (s *Store) cleanupExpired() {
-	s.mu.Lock()
-	keysToCheck := s.expiredKeys
-	s.expiredKeys = nil
-	s.mu.Unlock()
-
-	// Check and remove expired keys
-	for _, key := range keysToCheck {
-		val, ok := s.data.Load(key)
-		if !ok {
-			continue
-		}
-
-		entry := val.(*Entry)
-		if entry.IsExpired() {
-			s.data.Delete(key)
-		}
-	}
-
-	// Full scan for any missed expired entries
+	// Full scan of all entries to check for expiration
 	s.data.Range(func(key, value interface{}) bool {
 		entry := value.(*Entry)
 		if entry.IsExpired() {
@@ -263,13 +241,6 @@ func (s *Store) cleanupExpired() {
 		}
 		return true
 	})
-}
-
-// markForCleanup adds a key to the cleanup queue.
-func (s *Store) markForCleanup(key string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.expiredKeys = append(s.expiredKeys, key)
 }
 
 // recordLatency records operation latency for metrics.
@@ -333,12 +304,6 @@ func (m *StoreMetrics) recordError() {
 func (m *StoreMetrics) Copy() *StoreMetrics {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
-	hitRate := 0.0
-	totalAccesses := m.Hits + m.Misses
-	if totalAccesses > 0 {
-		hitRate = float64(m.Hits) / float64(totalAccesses)
-	}
 
 	return &StoreMetrics{
 		Gets:       m.Gets,

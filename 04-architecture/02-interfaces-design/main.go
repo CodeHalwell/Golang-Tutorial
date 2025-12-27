@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"time"
 )
 
 // === INTERFACE DESIGN PATTERNS ===
@@ -261,10 +260,7 @@ func (aa APIAdapter) Process(input string) (string, error) {
 // Example 9: Interface embedding for composition
 //
 // Embed interfaces to create larger ones
-
-type Writer interface {
-	Write(p []byte) (n int, err error)
-}
+// (Note: Writer is already defined earlier in this file)
 
 type Flusher interface {
 	Flush() error

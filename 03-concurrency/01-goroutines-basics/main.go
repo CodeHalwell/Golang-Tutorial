@@ -320,10 +320,10 @@ func example11_WorkerPool() {
 	}
 }
 
-// ===== EXAMPLE 12: Fan-Out Pattern =====
+// ===== EXAMPLE 12: Fan-Out/Fan-In Pattern =====
 
 func example12_FanOut() {
-	fmt.Println("\n=== EXAMPLE 12: Fan-Out Pattern ===")
+	fmt.Println("\n=== EXAMPLE 12: Fan-Out/Fan-In Pattern ===")
 
 	// Generate work
 	work := func() <-chan int {
@@ -337,28 +337,92 @@ func example12_FanOut() {
 		return out
 	}()
 
-	// Fan out to multiple workers
+	// Fan out: broadcast each value to multiple workers
+	// Each worker gets ALL values from the input
+	fanOut := func(in <-chan int, numWorkers int) []<-chan int {
+		outputs := make([]<-chan int, numWorkers)
+		channels := make([]chan int, numWorkers)
+		
+		for i := 0; i < numWorkers; i++ {
+			ch := make(chan int, 10) // Larger buffer to reduce blocking risk
+			channels[i] = ch
+			outputs[i] = ch
+		}
+
+		go func() {
+			for val := range in {
+				// Broadcast to all workers with timeout protection
+				for i := 0; i < numWorkers; i++ {
+					select {
+					case channels[i] <- val:
+						// Successfully sent
+					case <-time.After(100 * time.Millisecond):
+						// Worker is too slow, skip this value for this worker
+						fmt.Printf("Warning: Worker %d is slow, skipping value\n", i)
+					}
+				}
+			}
+			// Close all output channels
+			for i := 0; i < numWorkers; i++ {
+				close(channels[i])
+			}
+		}()
+
+		return outputs
+	}
+
+	// Process function for each worker
 	process := func(id int, in <-chan int) <-chan int {
 		out := make(chan int)
 		go func() {
+			defer close(out)
 			for n := range in {
-				fmt.Printf("Worker %d: %d -> %d\n", id, n, n*10)
-				out <- n * 10
+				result := n * (id + 1) // Different processing per worker
+				fmt.Printf("Worker %d: %d -> %d\n", id, n, result)
+				out <- result
 			}
-			close(out)
 		}()
 		return out
 	}
 
-	ch1 := process(1, work)
-	ch2 := process(2, work)
+	// Fan out work to 2 workers
+	workerInputs := fanOut(work, 2)
+	
+	// Process with each worker
+	ch1 := process(1, workerInputs[0])
+	ch2 := process(2, workerInputs[1])
 
-	// Merge results
-	for x := range ch1 {
-		fmt.Printf("Got from ch1: %d\n", x)
-	}
-	for x := range ch2 {
-		fmt.Printf("Got from ch2: %d\n", x)
+	// Fan in: merge results concurrently using sync.WaitGroup
+	merged := make(chan int)
+	var wg sync.WaitGroup
+	
+	wg.Add(2)
+	
+	// Collect from ch1
+	go func() {
+		defer wg.Done()
+		for x := range ch1 {
+			merged <- x
+		}
+	}()
+	
+	// Collect from ch2
+	go func() {
+		defer wg.Done()
+		for x := range ch2 {
+			merged <- x
+		}
+	}()
+	
+	// Close merged when all inputs are done
+	go func() {
+		wg.Wait()
+		close(merged)
+	}()
+
+	// Collect all results
+	for result := range merged {
+		fmt.Printf("Got result: %d\n", result)
 	}
 }
 

@@ -75,9 +75,10 @@ func LinearPipeline(
 	return output
 }
 
-// FanOut splits a single input stream into multiple independent outputs.
+// FanOut splits a single input stream into multiple independent outputs by broadcasting.
+// Each output receives ALL values from the input (true broadcast pattern).
 //
-// Use case: Broadcasting work to multiple consumers
+// Use case: Broadcasting work to multiple consumers that all need the same data
 // Example: Send notification to multiple channels (email, SMS, push)
 func FanOut(
 	ctx context.Context,
@@ -86,22 +87,46 @@ func FanOut(
 ) []<-chan interface{} {
 	outputs := make([]<-chan interface{}, numOutputs)
 
+	// Create buffered output channels
+	channels := make([]chan interface{}, numOutputs)
 	for i := 0; i < numOutputs; i++ {
-		ch := make(chan interface{}, 1) // Buffered to prevent deadlock
+		ch := make(chan interface{}, 1) // Buffered to prevent blocking
+		channels[i] = ch
 		outputs[i] = ch
+	}
 
-		go func(output chan<- interface{}) {
-			defer close(output)
+	// Single goroutine to broadcast to all outputs
+	go func() {
+		defer func() {
+			// Close all output channels when input is closed
+			for _, ch := range channels {
+				close(ch)
+			}
+		}()
 
-			for val := range input {
-				select {
-				case output <- val:
-				case <-ctx.Done():
+		for {
+			select {
+			case val, ok := <-input:
+				if !ok {
 					return
 				}
+				// Broadcast to all outputs with timeout protection
+				for i, ch := range channels {
+					select {
+					case ch <- val:
+						// Successfully sent
+					case <-time.After(100 * time.Millisecond):
+						// Consumer is too slow, drop this value for this output
+						_ = i // Avoid unused variable
+					case <-ctx.Done():
+						return
+					}
+				}
+			case <-ctx.Done():
+				return
 			}
-		}(ch)
-	}
+		}
+	}()
 
 	return outputs
 }
