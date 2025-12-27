@@ -1,0 +1,233 @@
+# golangci-lint configuration for Go Mastery Repository
+# This enforces code quality standards aligned with production Go practices
+
+run:
+  timeout: 5m
+  go: '1.21'
+  modules-download-mode: readonly
+
+output:
+  formats:
+    - format: colored-line-number
+    - format: json
+      path: ./golangci-report.json
+
+linters:
+  enable:
+    # Error checking
+    - errcheck          # Check for unchecked errors
+    - errname           # Check error name conventions
+    - errorlint         # Check for error wrapping mistakes
+
+    # Code style
+    - gofmt             # Format consistency
+    - goimports         # Import organization
+    - gofumpt           # Stricter formatting
+
+    # Correctness
+    - gocritic          # Detect bugs and style problems
+    - govet             # Go vet
+    - staticcheck       # Static analysis (includes gosimple and stylecheck)
+    - ineffassign       # Detect ineffective assignments
+
+    # Best practices
+    - contextcheck      # Check context usage
+    - goconst           # Find repeated constants
+    - godot             # Check comment endings
+    - godox             # Check for TODO, BUG, etc.
+    - unused            # Detect unused code
+
+    # Go specific patterns
+    - exportloopref     # Check exported loop variables
+    - ifshort           # Simplify if-else statements
+    - nilerr            # Check if nil error returns are checked
+    - predeclared       # Check predeclared identifier shadows
+    - unconvert         # Remove unnecessary conversions
+    - unparam           # Check unused function parameters
+
+    # Concurrency (critical for this repo)
+    - racecondition     # Check for race conditions (experimental)
+
+    # Performance
+    - prealloc          # Check pre-allocated slices
+
+  disable:
+    - revive            # Too strict, we use other linters instead
+
+linters-settings:
+  gofmt:
+    simplify: true
+
+  gofumpt:
+    extra-rules: true
+
+  govet:
+    check-shadowing: true
+
+  gocritic:
+    enabled-checks:
+      - appendAssign
+      - argOrder
+      - badCond
+      - badLock
+      - badReceiver
+      - captLocal
+      - caseOrder
+      - codegenComment
+      - commentedOutCode
+      - commentedOutImport
+      - defaultCaseOrder
+      - deferUnlambda
+      - deprecatedComment
+      - dupArg
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - dynamicFmtString
+      - elseif
+      - emptyFallthrough
+      - emptyStringTest
+      - equalFold
+      - evalOrder
+      - exitAfterDefer
+      - externalMethodReceiver
+      - filepathJoin
+      - flagDeref
+      - flagName
+      - hexLiteral
+      - httpNoBody
+      - ifElseChain
+      - importShadow
+      - indexAlloc
+      - initClause
+      - intRange
+      - invalidPrintfHook
+      - isZero
+      - logicalKeywordOrder
+      - maybeMutexKey
+      - methodExprCall
+      - mixedNamedArguments
+      - modifyResourceInEffectiveLoop
+      - nestingLevel
+      - newDeref
+      - nilValReturn
+      - octalLiteral
+      - offBy1
+      - paramTypeCombine
+      - preferFprint
+      - preferWriteByte
+      - ptrToRefParam
+      - rangeExprCopy
+      - rangeValCopy
+      - redundantSprint
+      - regexpMust
+      - regexpPattern
+      - regexpSimplify
+      - ruleguard
+      - slicePtrLen
+      - sliceWithPrealloc
+      - sqlQuery
+      - stringConcatSimplify
+      - stringXaddUnexportedConversion
+      - suspiciousSortSlice
+      - syncMapLoadAndDelete
+      - timeEqualsBadMonthYear
+      - tooManyResultsChecker
+      - truncateBinexp
+      - typeAssertChain
+      - typeDefFirst
+      - typeSwitchVar
+      - typeUnparen
+      - uncheckedInlineErr
+      - unconvertibleTypeAssert
+      - underef
+      - unexportedNameReturn
+      - unexportedTypeInInterface
+      - unhandledError
+      - unimportedAlias
+      - unnamedResult
+      - unnecessaryBlock
+      - unnecessaryDefer
+      - unslice
+      - unusedReceiver
+      - varDecl
+      - weakCond
+      - whyNoLint
+      - wrapperFunc
+      - yodaStyleExpr
+
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+
+  stylecheck:
+    checks:
+      - "all"
+      - "-ST1000"  # Package comment should start with package name
+      - "-ST1020"  # Comment should start with "Exported"
+
+  unused:
+    check-exported: true
+
+  unparam:
+    check-exported: true
+
+  contextcheck:
+    skipAnalyzeTests: false
+
+severity:
+  default-severity: error
+  rules:
+    - linters:
+        - dupl
+      severity: warning
+    - linters:
+        - godot
+      severity: warning
+    - linters:
+        - goconst
+      severity: warning
+
+issues:
+  # Set to 0 to show all issues
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    # Exclude some linters from running on test files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - gosec
+        - dupl
+        - unparam
+
+    # Ignore long comments in examples
+    - linters:
+        - godot
+      path: _test\.go
+
+    # Allow defer in goroutines during testing
+    - linters:
+        - gocritic
+      text: "deferUnlambda"
+      path: _test\.go
+
+    # Allow nested error checks in tests
+    - linters:
+        - nilerr
+      path: _test\.go
+
+    # Ignore commented code in examples (for educational purposes)
+    - linters:
+        - gocritic
+      text: "commentedOutCode"
+      source: "(// ✓|// ❌|// Example:|// BAD:|// GOOD:)"
+
+# Allow go.mod and go.sum from being checked
+# since they're managed by go get/go mod commands
+files:
+  skip:
+    - vendor
