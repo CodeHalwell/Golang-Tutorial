@@ -15,6 +15,17 @@ import (
 	"time"
 )
 
+// Shared HTTP client for backend requests
+// http.Client is safe for concurrent use by multiple goroutines
+var defaultHTTPClient = &http.Client{
+	Timeout: 10 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+	},
+}
+
 // Server implements the API gateway HTTP server
 type Server struct {
 	addr              string
@@ -90,7 +101,7 @@ func (s *Server) AddMiddleware(m Middleware) {
 
 // handler creates the HTTP handler with middleware chain
 func (s *Server) handler() http.Handler {
-	baseHandler := http.HandlerFunc(s.handleRequest)
+	baseHandler := http.Handler(http.HandlerFunc(s.handleRequest))
 
 	// Apply middleware in reverse order (last added executes first)
 	handler := baseHandler
@@ -258,12 +269,8 @@ func NewBackendHandler(target *url.URL) func(*http.Request) (*http.Response, err
 		backendReq.Header.Add("X-Forwarded-Proto", req.Proto)
 		backendReq.Header.Add("X-Forwarded-Host", req.Host)
 
-		// Create HTTP client with timeout
-		client := &http.Client{
-			Timeout: 10 * time.Second,
-		}
-
-		return client.Do(backendReq)
+		// Use shared HTTP client (safe for concurrent use)
+		return defaultHTTPClient.Do(backendReq)
 	}
 }
 

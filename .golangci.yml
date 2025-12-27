@@ -4,8 +4,6 @@
 run:
   timeout: 5m
   go: '1.21'
-  skip-files:
-    - ".*_test.go$"  # Optional: exclude test files from some checks
   modules-download-mode: readonly
 
 output:
@@ -25,15 +23,12 @@ linters:
     - gofmt             # Format consistency
     - goimports         # Import organization
     - gofumpt           # Stricter formatting
-    - gosimple          # Simplify code
-    - stylecheck        # Style conventions
 
     # Correctness
     - gocritic          # Detect bugs and style problems
     - govet             # Go vet
-    - staticcheck       # Static analysis
+    - staticcheck       # Static analysis (includes gosimple and stylecheck)
     - ineffassign       # Detect ineffective assignments
-    - megacheck         # Includes staticcheck, gosimple, govet
 
     # Best practices
     - contextcheck      # Check context usage
