@@ -132,17 +132,22 @@ increment(&n)
 fmt.Println(n)  // 6 (modified!)
 ```
 
-### Slices and Maps (Already References)
+### Slices and Maps (Reference-Like Behavior)
 
 ```go
 func append(slice []int, val int) {
-    // Slice is a reference, modifications affect original
+    // Slice header is passed by value, but it contains a pointer
+    // to the underlying array. Modifications to existing elements
+    // affect the original, but appending may create a new array.
+    // Always return and reassign: slice = append(slice, val)
 }
 
 func set(m map[string]string, key string, val string) {
-    m[key] = val  // Affects original map
+    m[key] = val  // Maps are reference types - always affects original
 }
 ```
+
+**Important:** While slices behave like references for existing elements, operations that change the slice's length or capacity (like `append`) may allocate a new array. Always return and use the result: `slice = append(slice, val)`.
 
 ---
 

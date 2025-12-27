@@ -3,8 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -119,20 +122,29 @@ func safeDivide(a, b float64) (result float64, err error) {
 }
 
 // Example 8: Deferred cleanup with error handling
+// This pattern demonstrates proper resource management with defer
 func processFile(filename string) error {
-	file, err := ioutil.ReadFile(filename)
+	// Open file (this would normally be os.Open for a real file)
+	file, err := os.Open(filename)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}
 
-	// In real code with writable files:
-	// defer func() {
-	//     if err := file.Close(); err != nil {
-	//         log.Printf("close error: %v", err)
-	//     }
-	// }()
+	// Defer ensures cleanup happens even if errors occur later
+	defer func() {
+		if err := file.Close(); err != nil {
+			// In production, log this error properly
+			fmt.Printf("Warning: failed to close file: %v\n", err)
+		}
+	}()
 
-	fmt.Printf("File contents (%d bytes)\n", len(file))
+	// Read file contents
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("read failed: %w", err)
+	}
+
+	fmt.Printf("File contents (%d bytes)\n", len(data))
 	return nil
 }
 
@@ -222,8 +234,8 @@ func main() {
 
 	// Example 8: File processing
 	fmt.Println("\nExample 8: File processing")
-	// Create a test file
-	testFile := "/tmp/test.txt"
+	// Create a test file in platform-appropriate temp directory
+	testFile := filepath.Join(os.TempDir(), "test.txt")
 	_ = ioutil.WriteFile(testFile, []byte("test content"), 0644)
 	if err := processFile(testFile); err != nil {
 		fmt.Printf("Error: %v\n", err)

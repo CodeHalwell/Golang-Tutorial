@@ -409,8 +409,8 @@ func main() {
 }
 ```
 
-### Exercise 3: Multiple Files
-Create two files and run them together:
+### Exercise 3: Multiple Files in Same Package
+Create two files in the same package and run them together:
 
 **hello.go:**
 ```go
@@ -424,6 +424,17 @@ func main() {
 
 func sayHello() {
     fmt.Println("Hello from hello.go")
+}
+```
+
+**greeter.go:**
+```go
+package main
+
+import "fmt"
+
+func sayGoodbye() {
+    fmt.Println("Goodbye from greeter.go")
 }
 ```
 

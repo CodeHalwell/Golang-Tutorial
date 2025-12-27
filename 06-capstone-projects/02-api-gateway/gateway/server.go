@@ -255,14 +255,14 @@ type BackendHandler struct {
 // NewBackendHandler creates a backend handler
 func NewBackendHandler(target *url.URL) func(*http.Request) (*http.Response, error) {
 	return func(req *http.Request) (*http.Response, error) {
-		// Create new request for backend
-		backendReq := &http.Request{
-			Method:     req.Method,
-			URL:        &url.URL{Scheme: target.Scheme, Host: target.Host, Path: req.URL.Path, RawQuery: req.URL.RawQuery},
-			Header:     copyHeaders(req.Header),
-			Body:       req.Body,
-			RequestURI: "",
-		}
+		// Clone the request to avoid modifying the original
+		backendReq := req.Clone(req.Context())
+		
+		// Update URL for backend
+		backendReq.URL.Scheme = target.Scheme
+		backendReq.URL.Host = target.Host
+		backendReq.Host = target.Host
+		backendReq.RequestURI = "" // Must be empty for client requests
 
 		// Add forwarding headers
 		backendReq.Header.Add("X-Forwarded-For", getClientIP(req))
