@@ -334,12 +334,6 @@ func (m *StoreMetrics) Copy() *StoreMetrics {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	hitRate := 0.0
-	totalAccesses := m.Hits + m.Misses
-	if totalAccesses > 0 {
-		hitRate = float64(m.Hits) / float64(totalAccesses)
-	}
-
 	return &StoreMetrics{
 		Gets:       m.Gets,
 		Sets:       m.Sets,

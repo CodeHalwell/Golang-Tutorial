@@ -160,7 +160,7 @@ func handleFileError(err error) {
 }
 
 func main() {
-	fmt.Println("=== Error Handling Examples ===\n")
+	fmt.Println("=== Error Handling Examples ===")
 
 	// Example 1: Simple error
 	fmt.Println("Example 1: Simple error handling")
