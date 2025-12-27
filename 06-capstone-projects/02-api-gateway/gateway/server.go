@@ -101,10 +101,9 @@ func (s *Server) AddMiddleware(m Middleware) {
 
 // handler creates the HTTP handler with middleware chain
 func (s *Server) handler() http.Handler {
-	baseHandler := http.Handler(http.HandlerFunc(s.handleRequest))
+	var handler http.Handler = http.HandlerFunc(s.handleRequest)
 
 	// Apply middleware in reverse order (last added executes first)
-	handler := baseHandler
 	for i := len(s.middleware) - 1; i >= 0; i-- {
 		handler = s.middleware[i](handler)
 	}

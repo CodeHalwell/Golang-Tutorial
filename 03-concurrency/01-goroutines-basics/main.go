@@ -344,16 +344,22 @@ func example12_FanOut() {
 		channels := make([]chan int, numWorkers)
 		
 		for i := 0; i < numWorkers; i++ {
-			ch := make(chan int, 5) // Buffered to prevent blocking
+			ch := make(chan int, 10) // Larger buffer to reduce blocking risk
 			channels[i] = ch
 			outputs[i] = ch
 		}
 
 		go func() {
 			for val := range in {
-				// Broadcast to all workers
+				// Broadcast to all workers with timeout protection
 				for i := 0; i < numWorkers; i++ {
-					channels[i] <- val
+					select {
+					case channels[i] <- val:
+						// Successfully sent
+					case <-time.After(100 * time.Millisecond):
+						// Worker is too slow, skip this value for this worker
+						fmt.Printf("Warning: Worker %d is slow, skipping value\n", i)
+					}
 				}
 			}
 			// Close all output channels

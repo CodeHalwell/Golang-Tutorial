@@ -110,10 +110,14 @@ func FanOut(
 				if !ok {
 					return
 				}
-				// Broadcast to all outputs
-				for _, ch := range channels {
+				// Broadcast to all outputs with timeout protection
+				for i, ch := range channels {
 					select {
 					case ch <- val:
+						// Successfully sent
+					case <-time.After(100 * time.Millisecond):
+						// Consumer is too slow, drop this value for this output
+						_ = i // Avoid unused variable
 					case <-ctx.Done():
 						return
 					}
