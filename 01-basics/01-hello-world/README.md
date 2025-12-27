@@ -440,8 +440,14 @@ func sayGoodbye() {
 
 **Run with:**
 ```bash
-go run hello.go
+# Run all .go files in the current directory
+go run .
+
+# Or explicitly list the files
+go run hello.go greeter.go
 ```
+
+Both files are compiled together as part of the same `main` package. You can call functions from either file within the same package.
 
 ---
 
